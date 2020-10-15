@@ -5,9 +5,11 @@ module.exports = function(router, database) {
   // Create a new user
   router.post('/', (req, res) => {
     const user = req.body;
+    
     user.password = bcrypt.hashSync(user.password, 12);
     database.addUser(user)
     .then(user => {
+      
       if (!user) {
         res.send({error: "error"});
         return;
@@ -24,18 +26,23 @@ module.exports = function(router, database) {
    * @param {String} password encrypted
    */
   const login =  function(email, password) {
+    
     return database.getUserWithEmail(email)
     .then(user => {
+      console.log(user);
       if (bcrypt.compareSync(password, user.password)) {
+        
         return user;
       }
       return null;
-    });
+    })
+    .catch(err => console("error is ", err));
   }
   exports.login = login;
 
   router.post('/login', (req, res) => {
     const {email, password} = req.body;
+    
     login(email, password)
       .then(user => {
         if (!user) {
