@@ -104,12 +104,101 @@ exports.getAllReservations = getAllReservations;
  */
 
 const getAllProperties = function(options) {
-  limit = 5;
-  return pool.query(`
-  SELECT * FROM properties
-  LIMIT $1
-  `, [limit])
+console.log("here is option",options);
+
+  
+  let subQuery ='';
+  let queryString = `
+  SELECT properties.*, avg(property_reviews.rating) as average_rating
+  FROM properties
+  JOIN property_reviews ON properties.id = property_id `;
+
+
+  if(options.city) {
+    subQuery += `WHERE city LIKE '%${options.city}%' `;
+    console.log("here is sub query", subQuery);
+  }
+  if(options.owner_id) {
+    if(options.city) {
+      subQuery = '';
+      subQuery += `WHERE city = '${options.city}' AND owner_id = ${Number(options.owner_id)} `;
+    } else {
+      subQuery = '';
+      subQuery += `WHERE owner_id = ${Number(options.owner_id)} `;
+    }
+  }
+  if(options.minimum_price_per_night && options.maximum_price_per_night) {
+
+    subQuery = '';
+    subQuery += `WHERE  cost_per_night BETWEEN ${Number(options.minimum_price_per_night)} AND ${Number(options.maximum_price_per_night)} `;
+  
+
+    if(options.city) {
+      subQuery = '';
+      subQuery += `WHERE city = '${options.city}' AND cost_per_night BETWEEN ${Number(options.minimum_price_per_night)} AND ${Number(options.maximum_price_per_night)} `;
+    }
+    if(options.owner_id) {
+      subQuery = '';
+      subQuery += `WHERE  owner_id = ${Number(options.owner_id)} AND cost_per_night BETWEEN ${Number(options.minimum_price_per_night)} AND ${Number(options.maximum_price_per_night)} `;
+ 
+    }
+    if(options.city && options.owner_id) {
+      subQuery = '';
+      subQuery += `WHERE  city = '${options.city}' AND owner_id = ${Number(options.owner_id)} AND cost_per_night BETWEEN ${Number(options.minimum_price_per_night)} AND ${Number(options.maximum_price_per_night)} `;
+ 
+    }
+
+  }
+  if(options.minimum_rating) {
+    subQuery = '';
+    subQuery += `WHERE  property_reviews.rating >= ${options.minimum_rating} `;
+
+    if(options.city) {
+      subQuery = '';
+      subQuery += `WHERE city = '${options.city}' AND  property_reviews.rating >= ${options.minimum_rating} `;
+    }
+
+    if(options.owner_id) {
+      subQuery = '';
+      subQuery += `WHERE  owner_id = ${Number(options.owner_id)} AND property_reviews.rating >= ${options.minimum_rating} `;
+ 
+    }
+
+    if(options.minimum_price_per_night && options.maximum_price_per_night) {
+      subQuery = '';
+      subQuery += `WHERE  property_reviews.rating >= ${options.minimum_rating} AND cost_per_night BETWEEN ${Number(options.minimum_price_per_night)} AND ${Number(options.maximum_price_per_night)} `;
+  
+    }
+
+    if(options.city  && options.minimum_rating && options.minimum_price_per_night && options.maximum_price_per_night) {
+      subQuery = '';
+      subQuery += `WHERE  property_reviews.rating >= ${options.minimum_rating} AND city = '${options.city}'  AND cost_per_night BETWEEN ${Number(options.minimum_price_per_night)} AND ${Number(options.maximum_price_per_night)} `;
+ 
+    }
+  
+  }
+
+
+  let afterWhereString =`GROUP BY properties.id
+  HAVING avg(property_reviews.rating) >= 4
+  ORDER BY cost_per_night
+  LIMIT 10;
+  `;
+
+  
+
+  if(subQuery === '') {
+    queryString += afterWhereString;
+  } else {
+    queryString += subQuery + afterWhereString;
+  }
+  console.log("here is final query", queryString);
+
+  return pool.query(queryString)
   .then(res => res.rows);
+
+
+  
 }
 exports.getAllProperties = getAllProperties;
 
