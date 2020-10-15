@@ -45,7 +45,7 @@ const getUserWithId = function(id) {
     SELECT *  FROM users
     WHERE id = $1
     `;
-    const values =  [id];
+  const values =  [id];
 
    return pool.query(queryString, values)
   .then(res => res.rows[0])
@@ -79,8 +79,18 @@ exports.addUser = addUser;
  * @param {string} guest_id The id of the user.
  * @return {Promise<[{}]>} A promise to the reservations.
  */
-const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+const getAllReservations = function(guest_id) {
+  
+  return pool.query(`SELECT properties.*, reservations.*, AVG(property_reviews.rating)
+  FROM properties
+  JOIN reservations ON reservations.property_id = properties.id 
+  JOIN property_reviews ON property_reviews.property_id = properties.id 
+  WHERE reservations.guest_id = ${guest_id} AND reservations.end_date < now()::date
+  GROUP BY properties.id, reservations.id
+  ORDER BY reservations.start_date
+  LIMIT 10;`)
+  .then(res => res.rows);
+
 }
 exports.getAllReservations = getAllReservations;
 
@@ -93,8 +103,8 @@ exports.getAllReservations = getAllReservations;
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 
-const getAllProperties = function(options, limit = 5) {
-  
+const getAllProperties = function(options) {
+  limit = 5;
   return pool.query(`
   SELECT * FROM properties
   LIMIT $1
